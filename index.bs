@@ -284,31 +284,55 @@ mechanism for metadata discovery.
 Transport and metadata discovery with QUIC {#transport}
 =======================================================
 
-If a listening agent wants to connect to an advertising agent, or to
-learn further metadata about it, it initiates a [[QUIC]] connection to
-the IP and port from the SRV record.  Prior to authentication, a message may be
-exchanged (such as further metadata), but such info should be treated as
-unverified (such as indicating to a user that a display name of an
+If a listening agent ("controller") wants to connect to an advertising agent
+("receiver"), or to learn further metadata about it, it initiates a [[QUIC]]
+connection to the IP and port from the SRV record.  Prior to authentication,
+a message may be exchanged (such as further metadata), but such info should be
+treated as unverified (such as indicating to a user that a display name of an
 unauthenticated agent is unverified).
 
-To learn further metadata, an agent may send an agent-info-request
-message (see [[#appendix-a]]) and receive back an agent-info-response message.  The
-messages may contain the following information with the following meaning:
+To learn further metadata, the controller may send an agent-info-request
+message (see [[#appendix-a]]) and receive back an agent-info-response message.
+The messages may contain the following properties:
 
 : display-name (required)
-:: The display name of the responding agent intended
-    to be displayed to a user by the requesting agent.  If the responding agent
-    is not yet authenticated, the requesting agent should make UI affordance for
-    indicating to the user that the display name is not yet verified.  If the
-    responding agent changes its display name, the requesting agent should
-    make UI affordance for indicating to the user that the display name has
-    changed.
+:: The display name of the receiver, intended to be displayed to a user by the
+   controller. The controller should indicate through the UI if the receiver
+   is not authenticated or if the display name changes.
 
 : model-name (optional)
-:: If the agent is a hardware device, the model name of
+:: If the receiver is a hardware device, the model name of
     the device.  This is used mainly for debugging purposes, but may be
     displayed to the user of the requesting agent.
 
+: audio-only (optional)
+:: Generally speaking, receivers are assumed to support streaming both
+audio and video. If an receiver wishes to indicate that they only support audio
+stream, they can pass this property as true. In that case, the controller
+should indicate through the UI that the receiver is audio only.
+
+If the receiver is already authenticated, the controller has the ability to
+request additional information by sending an streaming-capabilities-request
+message, and receive back a streaming-capabilities-response message with the
+following properties:
+
+: supported-resolutions (required)
+:: The receiver shall indicate what resolutions and refresh rates it supports
+streaming content at.
+
+<!-- TODO(jophba): figure out the units for this -->
+: max-pixel-fill-rate (optional)
+:: In combination with the supported resolutions, the receiver has the
+option to to reply with the supported pixel fill rate in <UNITS>.
+Requesting agents can use this information to make better-educated decisions
+about what resolution and frame rates to stream content at.
+
+<!-- TODO(jophba): do we need this info? -->
+: supported-codecs (required)
+:: The receiver must indicate to the controller what codecs it understands for
+remote playback.
+
+<!-- TODO(jophba): what other capabilities do we need here? -->
 <!-- TODO: Add device type and/or capabilities -->
 
 Listening agents act as QUIC clients.  Advertising agents act as QUIC servers.
@@ -326,7 +350,6 @@ frames should not be used.  An idle_timeout transport parameter of 25 seconds is
 recommended.  The agent should behave as though a timer less than the
 idle_timeout were reset every time a message is sent on a QUIC stream.  If the
 timer expires, a agent-status-request message should be sent.
-
 
 If a client agent wishes to send messages to a server agent, the client
 agent can connect to the server agent "on demand"; it does not need to
@@ -400,7 +423,7 @@ To learn which receivers are [=available presentation displays=] for a
 particular URL or set of URLs, the controller may send a
 presentation-url-availability-request message with the following values:
 
-: urls 
+: urls
 :: A list of presentation URLs.  Must not be empty.
 
 : watch-duration
@@ -456,7 +479,7 @@ values:
 : url
 :: the selected presentation URL
 
-: headers 
+: headers
 :: headers that the receiver should use to fetch the
     presentationUrl.  For example,
     [[PRESENTATION-API#establishing-a-presentation-connection|section 6.6.1]] of
@@ -646,8 +669,8 @@ This section defines the use of the Open Screen Protocol for starting, terminati
 and controlling remote playback of media as defined by the
 [[REMOTE-PLAYBACK|Remote Playback API]].  [[#remote-playback-api]] defines how
 APIs in [[REMOTE-PLAYBACK|Remote Playback API]] map to the protocol messages
-defined in this section.  
- 
+defined in this section.
+
 For all messages defined in this section, see Appendix A for the full
 CDDL definitions.
 
@@ -666,7 +689,7 @@ following values:
 : urls
 :: A list of [=media resources=].  Must not be empty.
 
-: headers 
+: headers
 :: headers that the receiver should use to fetch the
     urls.  For example,
     [[REMOTE-PLAYBACK#establishing-a-connection-with-a-remote-playback-device|section 6.2.4 of
@@ -684,7 +707,7 @@ following values:
 
 In response, the receiver should send a remote-playback-availability-response
 message with the following values:
-  
+
 : url-availabilities
 :: A list of URL availability states (available,
     unavailable, or invalid).  Each state must correspond to the matching URL
@@ -718,7 +741,7 @@ To start remote playback, the controller may send a
 remote-playback-start-request message to the receiver with the following
 values:
 
-: remote-playback-id 
+: remote-playback-id
 :: An identifier that uniquely identifies the remote playback from the
     controller to the receiver.  It does not need to be unique across all remote
     playbacks from all controllers to that receive nor unique across all remote
@@ -757,7 +780,7 @@ If the controller wishes to modify the state of the remote playback (for
 example, to pause, resume, skip, etc), it may send a
 remote-playback-modify-request message with the following values:
 
-: remote-playback-id 
+: remote-playback-id
 :: The ID of the remote playback to be modified.
 
 : controls
@@ -775,7 +798,7 @@ the controller (such as when the skips or pauses due to user user interaction on
 the receiver), the receiver may send a remote-playback-state-event to the
 controller.
 
-: remote-playback-id 
+: remote-playback-id
 :: The ID of the remote playback whose state has changed.
 
 : state
@@ -786,7 +809,7 @@ controller.
 To terminate the remote playback, the controller may send a
 remote-playback-termination-request message with the following values:
 
-: remote-playback-id 
+: remote-playback-id
 :: The ID of the remote playback to terminate.
 
 : reason
@@ -836,7 +859,7 @@ intentionally mirror settable attributes and methods of the
     [HtmlMediaElement.src](https://html.spec.whatwg.org/multipage/media.html#dom-media-src)
     for more details. Must not be used in the initial controls of the
     remote-playback-start-request message (which already contains a list of URLs).
- 
+
 : preload
 :: Set how aggresively to preload media. See
     [HtmlMediaElement.preload](https://html.spec.whatwg.org/multipage/media.html#dom-media-preload)
@@ -853,7 +876,7 @@ intentionally mirror settable attributes and methods of the
     remote-playback-start-request.  If not set in the initial controls, it is
     assumed to be false.
 
-: paused 
+: paused
 :: If true, pause; if false, resume.  See
     [HtmlMediaElement.pause()](https://html.spec.whatwg.org/multipage/media.html#dom-media-pause).
     and
@@ -876,7 +899,7 @@ intentionally mirror settable attributes and methods of the
 : seek
 :: Seek to a precise time.  See
     [HtmlMediaElement.currentTime](https://html.spec.whatwg.org/multipage/media.html#dom-media-currenttime)
-    for more details. 
+    for more details.
 
 : fast-seek
 :: Seek to an approximate time as fast as possible. See
@@ -913,8 +936,8 @@ intentionally mirror settable attributes and methods of the
     [HtmlMediaElement.addTextTrack](https://html.spec.whatwg.org/multipage/media.html#dom-media-addtexttrack)
     for more details.  This is optional for the receiver to support and if not
     supported, the receiver will behave as though it were never set.
-    
-: changed-text-tracks 
+
+: changed-text-tracks
 :: Change text tracks by ID.  All other text tracks are left
     unchanged.  Set the mode, add cues, and remove cues by id.  See
     [HtmlMediaElement.textTracks](https://html.spec.whatwg.org/multipage/media.html#dom-media-texttracks)
@@ -959,14 +982,14 @@ changed.
 
 : error
 :: A major error occurred which prevents the remote playback from continuing. See
-    [HtmlMediaElement.error](https://html.spec.whatwg.org/multipage/media.html#dom-media-error) and 
+    [HtmlMediaElement.error](https://html.spec.whatwg.org/multipage/media.html#dom-media-error) and
     [HtmlMediaElement media error codes](https://html.spec.whatwg.org/multipage/media.html#concept-mediaerror-code).
     If not present in the intial state in the remote-playback-start-response
     message, it is assumed there is no such major error.
 
 : epoch
 :: The "zero time" of the media timeline.  See
-    [HtmlMediaElement's timeline offset](https://html.spec.whatwg.org/multipage/media.html#timeline-offset) and 
+    [HtmlMediaElement's timeline offset](https://html.spec.whatwg.org/multipage/media.html#timeline-offset) and
     [HtmlMediaElement.getStartDate()](https://html.spec.whatwg.org/multipage/media.html#dom-media-getstartdate).
     If not present in the intial state in the remote-playback-start-response
     message, it is assumed to be unknown.
@@ -1146,6 +1169,9 @@ reserved for messages that are infrequently sent or large or both
 because smaller type keys encode on the wire smaller.
 
 <!-- TODO: Make a bikeshed formatter CDDL -->
+<!-- TODO(jophba): Can we have this CDDL in a separate file, and have bikeshed
+     import it? I'm not a huge fan of this approach...
+-->
 
 <pre>
 ; type key 10
@@ -1159,10 +1185,38 @@ agent-info-response = {
   1: agent-info ; agent-info
 }
 
+streaming-capabilities-request = {
+  request
+}
+
+streaming-capabilities-response = {
+  response
+  1: agent-info-trusted ; agent-info-trusted
+}
+
 agent-info = {
-  0: text ; friendly-name
+  0: text ; display-name
   1: text ; model-name
-  ; ...
+  ? 2: bool ; audio-only
+}
+
+resolution = {
+  0: uint ; horizontal-resolution
+  1: uint ; vertical-resolution
+  2: [1* float64] ; refresh-rates
+}
+
+<!-- TODO(jophba): what codecs do we support? -->
+<!-- TODO(jophba): do we need this? -->
+<!-- TODO(jophba): flag enum? -->
+codec = (
+
+)
+
+streaming-capabilities = {
+  0: [1* resolution] ; supported-resolutions
+  ? 1: uint ; max-pixel-fill-rate
+  ? 2: [1* codec] ; supported-codecs
 }
 
 ; type key 12
@@ -1413,7 +1467,7 @@ remote-playback-state-event = {
   2: remote-playback-state ; state
 }
 
-remote-playback-id = uint 
+remote-playback-id = uint
 
 remote-playback-controls = {
   ? 1: url ; source
@@ -1421,10 +1475,10 @@ remote-playback-controls = {
   ? 3: bool ; loop
   ? 4: bool ; paused
   ? 5: bool ; muted
-  ? 6: float ; volume 
+  ? 6: float ; volume
   ? 7: media-time ; seek
   ? 8: media-time ; fast-seek
-  ? 9: float ; playback-rate 
+  ? 9: float ; playback-rate
   ? 10: url ; poster
   ? 11: [* text] ; enabled-audio-track-ids
   ? 12: text ; selected-video-track-id
@@ -1506,7 +1560,7 @@ text-track-cue = {
 }
 
 media-time-range = [
-  start: media-time, 
+  start: media-time,
   end: media-time
 ]
 
@@ -1515,7 +1569,7 @@ media-time = [
   scale: uint
 ]
 
-unknown = 0 
+unknown = 0
 forever = 1
 
 media-error = [
@@ -1548,5 +1602,6 @@ track-track-state = {
   track-state
   6 : mode ; text-track-mode
 }
+
 
 </pre>
