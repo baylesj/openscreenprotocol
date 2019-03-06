@@ -297,8 +297,8 @@ The messages may contain the following properties:
 
 : display-name (required)
 :: The display name of the receiver, intended to be displayed to a user by the
-   controller. The controller should indicate through the UI if the receiver
-   is not authenticated or if the display name changes.
+    controller. The controller should indicate through the UI if the receiver
+    is not authenticated or if the display name changes.
 
 : model-name (optional)
 :: If the receiver is a hardware device, the model name of
@@ -307,33 +307,28 @@ The messages may contain the following properties:
 
 : audio-only (optional)
 :: Generally speaking, receivers are assumed to support streaming both
-audio and video. If an receiver wishes to indicate that they only support audio
-stream, they can pass this property as true. In that case, the controller
-should indicate through the UI that the receiver is audio only.
+    audio and video. If an receiver wishes to indicate that they only support audio
+    stream, they can pass this property as true. In that case, the controller
+    should indicate through the UI that the receiver is audio only.
 
-If the receiver is already authenticated, the controller has the ability to
-request additional information by sending an streaming-capabilities-request
-message, and receive back a streaming-capabilities-response message with the
-following properties:
+    If the receiver is already authenticated, the controller has the ability to
+    request additional information by sending an streaming-capabilities-request
+    message, and receive back a streaming-capabilities-response message with the
+    following properties:
 
 : supported-resolutions (required)
 :: The receiver shall indicate what resolutions and refresh rates it supports
-streaming content at.
+    streaming content at.
 
-<!-- TODO(jophba): figure out the units for this -->
 : max-pixel-fill-rate (optional)
 :: In combination with the supported resolutions, the receiver has the
-option to to reply with the supported pixel fill rate in <UNITS>.
-Requesting agents can use this information to make better-educated decisions
-about what resolution and frame rates to stream content at.
+    option to to reply with the supported pixel fill rate in megapixels per second.
+    Requesting agents can use this information to make better-educated decisions
+    about what resolution and frame rates to stream content at.
 
-<!-- TODO(jophba): do we need this info? -->
 : supported-codecs (required)
 :: The receiver must indicate to the controller what codecs it understands for
-remote playback.
-
-<!-- TODO(jophba): what other capabilities do we need here? -->
-<!-- TODO: Add device type and/or capabilities -->
+    remote playback.
 
 Listening agents act as QUIC clients.  Advertising agents act as QUIC servers.
 
@@ -465,7 +460,7 @@ availability request.
 
 
 To save power, the controller may disconnect the QUIC connection and
-later reconnect to send availablity requests and receive availability
+later reconnect to send availability requests and receive availability
 responses and updates.
 
 
@@ -1169,9 +1164,6 @@ reserved for messages that are infrequently sent or large or both
 because smaller type keys encode on the wire smaller.
 
 <!-- TODO: Make a bikeshed formatter CDDL -->
-<!-- TODO(jophba): Can we have this CDDL in a separate file, and have bikeshed
-     import it? I'm not a huge fan of this approach...
--->
 
 <pre>
 ; type key 10
@@ -1206,11 +1198,18 @@ resolution = {
   2: [1* float64] ; refresh-rates
 }
 
-<!-- TODO(jophba): what codecs do we support? -->
-<!-- TODO(jophba): do we need this? -->
-<!-- TODO(jophba): flag enum? -->
 codec = (
-
+  H-264-1080
+  H-264-720
+  MPEG-4
+  MP3
+  VP8
+  AAC-LC
+  AC3
+  eAC3
+  FLAC
+  PCM
+  Vorbis
 )
 
 streaming-capabilities = {

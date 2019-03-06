@@ -1212,9 +1212,9 @@ Possible extra rowspan handling
 		}
 	}
 </style>
-  <meta content="Bikeshed version 670c46b501fc025ae87a3398a195af35379ab37d" name="generator">
+  <meta content="Bikeshed version 1cff2db4ee2c3bba7a4077d3007528ec73b0485d" name="generator">
   <link href="https://webscreens.github.io/openscreenprotocol/" rel="canonical">
-  <meta content="85bd1c9b3e674e0d243c34d4908df5195cc44d7e" name="document-revision">
+  <meta content="2ac69bc3dfc3d3ded4560ae3942809e2da97d70a" name="document-revision">
 <style>/* style-md-lists */
 
 /* This is a weird hack for me not yet following the commonmark spec
@@ -1403,7 +1403,7 @@ pre .property::before, pre .property::after {
   <div class="head">
    <p data-fill-with="logo"></p>
    <h1 class="p-name no-ref" id="title">Open Screen Protocol</h1>
-   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Editor’s Draft, <time class="dt-updated" datetime="2019-01-05">5 January 2019</time></span></h2>
+   <h2 class="no-num no-toc no-ref heading settled" id="subtitle"><span class="content">Editor’s Draft, <time class="dt-updated" datetime="2019-03-17">17 March 2019</time></span></h2>
    <div data-fill-with="spec-metadata">
     <dl>
      <dt>This version:
@@ -1670,30 +1670,49 @@ Protocol uses mDNS but breaks compatibility with the metadata discovery process,
 it should change the DNS-SD service name to a new value, indicating a new
 mechanism for metadata discovery.</p>
    <h2 class="heading settled" data-level="4" id="transport"><span class="secno">4. </span><span class="content">Transport and metadata discovery with QUIC</span><a class="self-link" href="#transport"></a></h2>
-   <p>If a listening agent wants to connect to an advertising agent, or to
-learn further metadata about it, it initiates a <a data-link-type="biblio" href="#biblio-quic">[QUIC]</a> connection to
-the IP and port from the SRV record.  Prior to authentication, a message may be
-exchanged (such as further metadata), but such info should be treated as
-unverified (such as indicating to a user that a display name of an
+   <p>If a listening agent ("controller") wants to connect to an advertising agent
+("receiver"), or to learn further metadata about it, it initiates a <a data-link-type="biblio" href="#biblio-quic">[QUIC]</a> connection to the IP and port from the SRV record.  Prior to authentication,
+a message may be exchanged (such as further metadata), but such info should be
+treated as unverified (such as indicating to a user that a display name of an
 unauthenticated agent is unverified).</p>
-   <p>To learn further metadata, an agent may send an agent-info-request
-message (see <a href="#appendix-a">Appendix A: Messages</a>) and receive back an agent-info-response message.  The
-messages may contain the following information with the following meaning:</p>
+   <p>To learn further metadata, the controller may send an agent-info-request
+message (see <a href="#appendix-a">Appendix A: Messages</a>) and receive back an agent-info-response message.
+The messages may contain the following properties:</p>
    <dl>
     <dt data-md>display-name (required)
     <dd data-md>
-     <p>The display name of the responding agent intended
-to be displayed to a user by the requesting agent.  If the responding agent
-is not yet authenticated, the requesting agent should make UI affordance for
-indicating to the user that the display name is not yet verified.  If the
-responding agent changes its display name, the requesting agent should
-make UI affordance for indicating to the user that the display name has
-changed.</p>
+     <p>The display name of the receiver, intended to be displayed to a user by the
+controller. The controller should indicate through the UI if the receiver
+is not authenticated or if the display name changes.</p>
     <dt data-md>model-name (optional)
     <dd data-md>
-     <p>If the agent is a hardware device, the model name of
+     <p>If the receiver is a hardware device, the model name of
 the device.  This is used mainly for debugging purposes, but may be
 displayed to the user of the requesting agent.</p>
+    <dt data-md>audio-only (optional)
+    <dd data-md>
+     <p>Generally speaking, receivers are assumed to support streaming both
+audio and video. If an receiver wishes to indicate that they only support audio
+stream, they can pass this property as true. In that case, the controller
+should indicate through the UI that the receiver is audio only.</p>
+     <p>If the receiver is already authenticated, the controller has the ability to
+request additional information by sending an streaming-capabilities-request
+message, and receive back a streaming-capabilities-response message with the
+following properties:</p>
+    <dt data-md>supported-resolutions (required)
+    <dd data-md>
+     <p>The receiver shall indicate what resolutions and refresh rates it supports
+streaming content at.</p>
+    <dt data-md>max-pixel-fill-rate (optional)
+    <dd data-md>
+     <p>In combination with the supported resolutions, the receiver has the
+option to to reply with the supported pixel fill rate in megapixels per second.
+Requesting agents can use this information to make better-educated decisions
+about what resolution and frame rates to stream content at.</p>
+    <dt data-md>supported-codecs (required)
+    <dd data-md>
+     <p>The receiver must indicate to the controller what codecs it understands for
+remote playback.</p>
    </dl>
    <p>Listening agents act as QUIC clients.  Advertising agents act as QUIC servers.</p>
    <p>If a listening agent wishes to receive messages from an advertising agent or an
@@ -1799,7 +1818,7 @@ individually to controllers that have requested availability for the URLs that
 have changed in availability state within the watch duration of the original
 availability request.</p>
    <p>To save power, the controller may disconnect the QUIC connection and
-later reconnect to send availablity requests and receive availability
+later reconnect to send availability requests and receive availability
 responses and updates.</p>
    <p>To start a presentation, the controller may send a
 presentation-start-request message to the receiver with the following
@@ -2369,10 +2388,45 @@ agent-info-response = {
   1: agent-info ; agent-info
 }
 
+streaming-capabilities-request = {
+  request
+}
+
+streaming-capabilities-response = {
+  response
+  1: agent-info-trusted ; agent-info-trusted
+}
+
 agent-info = {
-  0: text ; friendly-name
+  0: text ; display-name
   1: text ; model-name
-  ; ...
+  ? 2: bool ; audio-only
+}
+
+resolution = {
+  0: uint ; horizontal-resolution
+  1: uint ; vertical-resolution
+  2: [1* float64] ; refresh-rates
+}
+
+codec = (
+  H-264-1080
+  H-264-720
+  MPEG-4
+  MP3
+  VP8
+  AAC-LC
+  AC3
+  eAC3
+  FLAC
+  PCM
+  Vorbis
+)
+
+streaming-capabilities = {
+  0: [1* resolution] ; supported-resolutions
+  ? 1: uint ; max-pixel-fill-rate
+  ? 2: [1* codec] ; supported-codecs
 }
 
 ; type key 12
@@ -2623,7 +2677,7 @@ remote-playback-state-event = {
   2: remote-playback-state ; state
 }
 
-remote-playback-id = uint 
+remote-playback-id = uint
 
 remote-playback-controls = {
   ? 1: url ; source
@@ -2631,10 +2685,10 @@ remote-playback-controls = {
   ? 3: bool ; loop
   ? 4: bool ; paused
   ? 5: bool ; muted
-  ? 6: float ; volume 
+  ? 6: float ; volume
   ? 7: media-time ; seek
   ? 8: media-time ; fast-seek
-  ? 9: float ; playback-rate 
+  ? 9: float ; playback-rate
   ? 10: url ; poster
   ? 11: [* text] ; enabled-audio-track-ids
   ? 12: text ; selected-video-track-id
@@ -2716,7 +2770,7 @@ text-track-cue = {
 }
 
 media-time-range = [
-  start: media-time, 
+  start: media-time,
   end: media-time
 ]
 
@@ -2725,7 +2779,7 @@ media-time = [
   scale: uint
 ]
 
-unknown = 0 
+unknown = 0
 forever = 1
 
 media-error = [
@@ -2758,6 +2812,7 @@ track-track-state = {
   track-state
   6 : mode ; text-track-mode
 }
+
 
 </pre>
   </main>
