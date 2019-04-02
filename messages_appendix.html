@@ -445,4 +445,45 @@
   <span class="nx">track-state</span>
 <span class="nx">  6 </span><span class="p">:</span> <span class="nx">mode </span><span class="c1">; text-track-mode</span>
 <span class="p">}</span>
+
+<span class="c1">; type key 22</span>
+<span class="nx">audio-frame </span><span class="p">=</span> <span class="p">[</span>
+  <span class="nx">encoding-id</span><span class="p">:</span> <span class="kt">uint</span>
+  <span class="nx">start-time</span><span class="p">:</span> <span class="kt">uint</span>
+  <span class="nx">payload</span><span class="p">:</span> <span class="nx">bytes</span>
+<span class="nx">  </span><span class="p">?</span> <span class="nx">optional</span><span class="p">:</span> <span class="p">{</span>
+    <span class="p">?</span> <span class="mi">0</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; duration</span>
+    <span class="p">?</span> <span class="mi">1</span><span class="p">:</span> <span class="nx">media-time </span><span class="c1">; sync-time</span>
+  <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="c1">; type key 23</span>
+<span class="nx">video-frame </span><span class="p">=</span> <span class="p">{</span>
+  <span class="mi">0</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; encoding-id</span>
+  <span class="mi">1</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; sequence-number</span>
+  <span class="p">?</span> <span class="mi">2</span><span class="p">:</span> <span class="p">[</span><span class="o">*</span> <span class="kt">int</span><span class="p">]</span> <span class="c1">; depends-on</span>
+  <span class="mi">3</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; start-time</span>
+  <span class="p">?</span> <span class="mi">4</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; duration</span>
+  <span class="mi">5</span><span class="p">:</span> <span class="nx">bytes </span><span class="c1">; payload</span>
+  <span class="p">?</span> <span class="mi">6</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; rotation</span>
+  <span class="p">?</span> <span class="mi">7</span><span class="p">:</span> <span class="nx">media-time </span><span class="c1">; sync-time</span>
+<span class="p">}</span>
+
+<span class="c1">; type key 24</span>
+<span class="nx">data-frame </span><span class="p">=</span> <span class="p">{</span>
+  <span class="mi">0</span><span class="p">:</span> <span class="kt">uint</span><span class="c1">; encoding-id</span>
+  <span class="p">?</span> <span class="mi">1</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; sequence-number</span>
+  <span class="p">?</span> <span class="mi">2</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; start-time</span>
+  <span class="p">?</span> <span class="mi">3</span><span class="p">:</span> <span class="kt">uint</span> <span class="c1">; duration</span>
+  <span class="mi">4</span><span class="p">:</span> <span class="nx">any</span><span class="c1">; payload</span>
+  <span class="p">?</span> <span class="mi">5</span><span class="p">:</span> <span class="nx">media-time </span><span class="c1">; sync-time</span>
+<span class="p">}</span>
+
+<span class="c1">; TODO(jophba): Why do some have type keys, but not others?</span>
+<span class="c1">; type key 120</span>
+<span class="nx">video-frame-request </span><span class="p">=</span> <span class="p">{</span>
+ <span class="mi">1</span><span class="p">:</span> <span class="kt">uint</span><span class="c1">; encoding-id</span>
+ <span class="mi">2</span><span class="p">:</span> <span class="kt">uint</span><span class="c1">; sequence-number</span>
+ <span class="p">?</span> <span class="mi">3</span><span class="p">:</span> <span class="kt">uint</span><span class="c1">; highest-decoded-frame-sequence-number</span>
+<span class="p">}</span>
 </pre></div>

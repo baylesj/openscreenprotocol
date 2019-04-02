@@ -1225,6 +1225,383 @@ implementation of this step is specific to the user agent.", the controlling
 user agent may send the remote-playback-termination-request message.
 
 
+Streaming Protocol {#streaming-protocol}
+========================================
+
+The section defines the use of the Open Screen Protocol for streaming
+media from one agent to another. We refer to the agent sending media
+as the *sender* and the agent receiving the media as the *receiver*.
+
+Capabilities {#streaming-capabilities}
+--------------------------------------------
+
+<!--
+  TODO(jophba):
+
+  Put in something like this:
+
+streaming-capabilities-request {
+  request
+}
+
+streaming-capabilities-response {
+  response
+  capabilities: streaming-capabilities
+}
+
+streaming-capabilities = {
+  receive-audio: [* receive-audio-capability]
+  receive-video: [* receive-video-capability]
+  receive-data: [* receive-data-capability]
+}
+
+
+receive-audio-capability = {
+  codec-name: text
+  codec-parameters: [* codec-parameter]
+}
+
+receive-video-capability = {
+  codec-name: text
+  codec-parameters: [* codec-parameter]
+  ? max-resolution: video-resolution
+  ? max-frames-per-second: float
+  ? max-pixels-per-second: float
+}
+
+receive-data-capability = {
+  format: text ; we define "text-cue" for text cues
+  format-parameters: codec-parameters
+}
+
+codec-parameter = {
+  key: text
+  value: bytes
+}
+
+-->
+
+Sessions {#streaming-sessions}
+------------------------------------
+
+<!--
+  TODO(jophba): Put in something like this
+
+streaming-session-start-request = {
+  request
+  streaming-session-id: uint
+  stream-offers: [* media-stream-offer]
+  stats-interval: microseconds ; please send receiver stats this often
+}
+
+streaming-session-start-response = {
+  response
+  stream-requests: [* media-stream-request]
+  stats-interval: microseconds ; please send sender stats this often
+}
+
+streaming-session-modify-request = {
+  request
+  streaming-session-id: uint
+  stream-requests: [* media-stream-request]
+}
+
+streaming-session-modify-response = {
+  response
+}
+
+streaming-session-stop-request = {
+  request
+  streaming-session-id: uint
+}
+
+streaming-session-stop-response = {
+  response
+}
+
+streaming-session-stop-event= {
+  streaming-session-id: uint
+}
+
+media-stream-offer = {
+  media-stream-id: uint
+  ? friendly-name: text
+  ? audio: [* audio-encoding-offer]
+  ? video: [* video-encoding-offer]
+  ? data: [* data-encoding-offer]
+}
+
+media-stream-request = {
+  media-stream-id: uint
+  ? audio: [* audio-encoding-request]
+  ? video: video-encoding-request
+  ? data: [* data-encoding-request]
+}
+
+audio-encoding-offer = {
+  encoding-id: uint
+  codec-name: text
+  codec-parameters: [* codec-parameter]
+  time-scale: uint ; AKA sample rate or clock rate
+  default-duration: uint ; AKA ptime
+}
+
+video-encoding-offer = {
+  encoding-id: uint
+  codec-name: text
+  codec-parameters: [* codec-parameter]
+  time-scale: uint ; AKA clock rate; probably 90khz
+  ? default-duration: uint ; AKA ptime
+  ? default-rotation: video-rotation
+}
+
+data-encoding-offer = {
+  encoding-id: uint
+  format: text ; "text-cue" defined to mean text cues
+  format-parameters: [* codec-parameter] ; format-specific
+  time-scale: uint ; AKA clock rate; probably 1mhz
+}
+
+audio-stream-request = {
+  encoding-id: uint
+}
+
+video-stream-request = {
+  encoding-id: uint
+  ? target-resolution: video-resolution ; displayed resolution; try to be slightly above; default is unknown
+  ? max-framerate: float
+}
+
+data-stream-request = {
+  encoding-id: uint
+}
+
+-->
+
+
+Audio {#streaming-audio}
+------------------------------
+
+Senders may send audio to receivers by sending audio-frame messages (see
+[[#appendix-a]]) with the following keys and values.  An audio frame message
+contains a set of encoded audio samples for a range of time. A series of
+encoded audio frames that share a codec, codec parameters and a timeline form an
+audio encoding.
+
+Unlike most Open Screen Protocol messages, this one uses an
+array-based grouping rather than a struct-based grouping.  For
+required fields, this allows for a more efficient use of bytes on the
+wire, which is important for streaming audio because the payload is
+typically so small and every byte of overhead is relatively large.  In
+order to accomodate optional values in the array-based grouping, one
+optional field in the array is used to hold all optional values in a
+struct-based grouping.  This will hopefully provide a good balance of
+efficiency and flexibility.
+
+To further increase efficiency, each audio-frame message must be sent
+in a separate QUIC stream without the length prefix.  It must only use
+the type key prefix and then the encoded CBOR message immediately
+after.  Separate QUIC streams also allow audio frames to be received
+out of order.
+
+: encoding-id
+:: Identifies the media encoding to which this audio frame belongs.  This can be
+    used to reference properties of the encoding such as the codec, codec
+    properties, time scale (aka clock rate or sample rate), and default
+    duration.  Referencing properties of the encoding through the encoding id
+    helps to avoid sending duplicate information in every frame.
+
+: start-time
+:: Identifies the beginning of the time range of the audio frame.  The time
+    scale is inferred from the properties of the encoding.  The end time can be
+    inferred from the start time and duration.
+
+: duration
+:: If present, the duration of the audio frame.  The time
+    scale is inferred from the properties of the encoding.  Likewise, if not
+    present, the duration is inferred from the properties of the encoding.
+
+: sync-time
+:: If present, a time used to synchronize the start time of this audio frame (and
+    thus, this encoding) with that of other media encodings on different
+    timelines.
+
+: payload
+:: The data.  The type of data is inferred from the properties of the encoding.
+
+Video {#streaming-video}
+--------------------------------------------
+
+Senders may send video to receivers by sending video-frame messages (see
+[[#appendix-a]]) with the following keys and values.  A video frame message
+contains an encoded video frame (an encoded image) at a specific point in time
+or over a specfic time range (if the duration is known).  A series of encoded
+video frames that share a codec, codec parameters and a timeline form a video
+encoding.
+
+To allow for video frames to be sent out of order, they may be sent in
+separate QUIC streams.  If the encoding is a long chain of encoded video frames
+dependent on the previous one back until an independent frame, it may make sense
+to send them in a single QUIC stream starting at the indepdendent frame and
+ending at the last dependent frame.
+
+: encoding-id
+:: Identifies the media encoding to which this video frame belongs.  This can be
+    used to reference properties of the encoding such as the codec, codec
+    properties, time scale, and default rotation.  Referencing properties of the
+    encoding through the encoding id helps to avoid sending duplicate
+    information in every frame.
+
+: sequence-number
+:: Identifies the frame and its order in the encoding.
+    Within an encoding, larger sequence numbers mean later start times.
+    Within an encoding, gaps in sequence numbers mean frames are missing.
+
+: depends-on
+:: If present, the sequence numbers of the frames this frame depends on.
+    If a sequence numbers is negative, it is treated as a relative sequence numbers
+    and the sequence numbers is calculated by adding it to the sequence number of this frame.
+    If empty, this is an independent frame (a key frame).
+    If not present, the default value is [-1].
+
+: start-time
+:: Identifies the beginning of the time range of the video frame.  The time
+    scale is inferred from the properties of the encoding.  The end time can be
+    inferred from the start time and duration.
+
+: duration
+:: If present, the duration of the video frame.  The time
+    scale is inferred from the properties of the encoding.  If not
+    present, that means duration is unknown.
+
+: sync-time
+:: If present, a time used to synchronize the start time of this frame (and
+    thus, this encoding) with that of other media encodings on different
+    timelines.
+
+: rotation
+:: If present, indicates how the frame should be rotated after decoding but
+    before rendering.  Rotation is clockwise in increments of 90 degrees.
+    The default is 0 (no rotation).
+
+: payload
+:: The encoded video frame (encoded image).  The codec and codec parameters are
+    inferred from the properties of the encoding.
+
+
+Data {#media-streaming-data}
+------------------------------------
+
+Senders may send timed data to receivers by sending data-frame messages (see
+[[#appendix-a]]) with the following keys and values.  A data frame message
+contains an arbitrary payload that can be synchronized with and video, such as
+text track data.  A series of data frames that share a data type and timeline
+form a data encoding.
+
+To allow for data frames to be sent out of order, they may be sent in separate
+QUIC streams, but more than one data frame may be sent in one QUIC stream if
+that makes sense for a specific type of data.
+
+Text track data uses a payload type of text, a default duration of unknown, and
+a timescale of 1000000 (microseconds).
+
+: encoding-id
+:: Identifies the media encoding to which this data frame belongs.  This can be
+    used to reference properties of the encoding such as the type of data and
+    time scale.  Referencing properties of the encoding through the encoding id
+    helps to avoid sending duplicate information in every frame.
+
+: sequence-number
+:: Identifies the frame and its order in the encoding.
+    Within an encoding, larger sequence numbers mean later start times.
+    Within an encoding, gaps in sequence numbers mean frames are missing.
+
+: start-time
+:: Identifies the beginning of the time range of the data frame.  The time
+    scale is inferred from the properties of the encoding.  The end time can be
+    inferred from the start time and duration.
+
+: duration
+:: If present, the duration of the data frame.  The time
+    scale is inferred from the properties of the encoding.  Likewise, if not
+    present, the duration is inferred from the properties of the encoding.
+
+: sync-time
+:: If present, a time used to synchronize the start time of this audio frame (and
+    thus, this encoding) with that of other media encodings on different
+    timelines.
+
+: payload
+:: The encoded audio samples.  The codec and codec parameters are inferred from
+    the properties of the encoding.
+
+Feedback {#streaming-feedback}
+------------------------------------
+
+The receiver can send feedback to the sender, such as key frame requests.
+
+A video key frame is requested by sending a video-request message with
+the following keys and values.
+
+To allow for video frames to be sent out of order, they may be sent in separate
+QUIC streams.
+
+: encoding-id
+:: The encoding for which the sender should send a new key frame.
+
+: sequence-number
+:: Gives the order in the encoding.
+    Within an encoding, larger sequence numbers invalidate previous ones.
+    A sender may ignore smaller sequence numbers after a larger one has been processed.
+    This it to prevent out-of-order requests from generating more key frames than necessary.
+
+: highest-decoded-frame-sequence-number: uint
+:: If set, the sender may generate a video frame dependent on the last decoded
+    frame.  If not set, the sender must generate an indepdendent (key) frame.
+
+Stats {#streaming-stats}
+------------------------------
+
+<!--
+
+ TODO(jophba): Something like this:
+
+streaming-session-sender-stats-event = {
+  timestamp: microseconds
+  ? audio: [* {
+    encoding-id: uint
+    ? sent: microseconds
+    ? encode-delay: microseconds
+    ; ...
+  }]
+  ? video: [* {
+    encoding-id: uint
+    ? encode-delay: microseconds
+    ? sent-frames: uint
+    ? dropped-frames: uint
+  }]
+}
+
+streaming-session-receiver-stats-event = {
+  timestamp: microseconds
+  ? audio: [* {
+    encoding-id: uint
+    ? received: microseconds
+    ? lost: microseconds
+    ? buffer-delay: microseconds
+    ? decode-delay: microseconds
+  }]
+  ? video: [* {
+    encoding-id: uint
+    ? received: microseconds
+    ? lost: microseconds
+    ? buffer-delay: microseconds
+    ? decode-delay: microseconds
+  }]
+}
+
+-->
+
 Security and Privacy {#security-privacy}
 ====================
 
