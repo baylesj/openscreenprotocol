@@ -1234,52 +1234,74 @@ as the *sender* and the agent receiving the media as the *receiver*.
 
 Capabilities {#streaming-capabilities}
 --------------------------------------------
+If the advertiser is already authenticated, the requester has the ability to
+request additional information by sending an streaming-capabilities-request
+message, and receive back a streaming-capabilities-response message with the
+following properties:
 
-<!--
-  TODO(jophba):
+: receive-audio (required)
+:: A list of audio capabilities. For an explanation of fields, see below.
 
-  Put in something like this:
+: receive-video (required)
+:: A list of video capabilities. For an explanation of fields, see below.
 
-streaming-capabilities-request {
-  request
-}
+: receive-data (required)
+:: A list of codecs that can be used to handle arbitrary data.
 
-streaming-capabilities-response {
-  response
-  capabilities: streaming-capabilities
-}
+The codec type is used as the basis for audio, video, and data capabilities.
+Codes are composed of the following properties:
 
-streaming-capabilities = {
-  receive-audio: [* receive-audio-capability]
-  receive-video: [* receive-video-capability]
-  receive-data: [* receive-data-capability]
-}
+: codec-name (required)
+:: The name of the codec.
 
+: parameters (required)
+:: A list of (key, value) parameters that can be used to transmit arbitrary
+    information about a codec.
 
-receive-audio-capability = {
-  codec-name: text
-  codec-parameters: [* codec-parameter]
-}
+Audio capabilities are composed of the above codec type, with the following
+additional fields:
 
-receive-video-capability = {
-  codec-name: text
-  codec-parameters: [* codec-parameter]
-  ? max-resolution: video-resolution
-  ? max-frames-per-second: float
-  ? max-pixels-per-second: float
-}
+: max-audio-channels (optional)
+:: An optional field indicating the maximum amount of audio
+    channels the device is capable of supporting. For example, a stereo speaker
+    system could supply this optional field with a value of "2" for the left and
+    right channels.
 
-receive-data-capability = {
-  format: text ; we define "text-cue" for text cues
-  format-parameters: codec-parameters
-}
+: min-bit-rate (optional)
+:: An optional field indicating the minimum audio bit rate that
+    the device can handle.
 
-codec-parameter = {
-  key: text
-  value: bytes
-}
+Video capabilities are similarly composed of the above codec type, with the
+following additional fields:
 
--->
+: max-resolution (optional)
+:: An optional field composed of a resolution, which includes (1) an unsigned
+    integer indicating horizontal resolution, and (2) an unsigned integer
+    indicating vertical resolution. The device can pass this field to indicate
+    the maximum resolution it supports.
+
+: max-frames-per-second (optional)
+:: An optional field indicating the maximum frames-per-second the device is
+    capable of processing.
+
+: min-video-bit-rate (optional)
+:: An optional field indicating the minimum video bit rate the device is
+    capable of processing.
+
+: aspect-ratio (optional)
+:: An optional field indicating what its ideal aspect ratio is, e.g. a 16:10
+    display could return this value as 1.6 to indicate its preferred content
+    scaling.
+
+: color-profiles (optional)
+:: An optional field indicating what color profiles are understood, such as
+    sRGB v4. The listener may use these values to determine how to encode
+    video.
+
+: supports-scaling (optional)
+:: If omitted, this value is assumed to be false. Setting to "True" indicates
+    that the device can scale content that is of an unsupported resolution or
+    non-ideal aspect ratio.
 
 Sessions {#streaming-sessions}
 ------------------------------------

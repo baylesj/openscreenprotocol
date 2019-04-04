@@ -486,3 +486,54 @@ video-frame-request = {
  2: uint; sequence-number
  ? 3: uint; highest-decoded-frame-sequence-number
 }
+
+streaming-capabilities-request = {
+  request
+}
+
+streaming-capabilities-response = {
+  response
+  1: streaming-capabilities ; streaming-capabilities
+}
+
+streaming-capabilities = {
+  0: [* receive-audio-capability] ; receive-audio
+  1: [* receive-video-capability] ; receive-video
+  2: [* receive-data-capability] ; receive-data
+}
+
+codec = {
+  0: string ; codec-name
+  1: [* codec-parameter] ; parameters
+}
+
+codec-parameter = {
+  0: string ; key
+  1: bytes ; value
+}
+
+receive-audio-capability = {
+  0: codec ; codec
+  ? 1: uint ; max-audio-channels
+  ? 2: float64 ; min-bit-rate
+}
+
+resolution = {
+  0: uint ; horizontal-resolution
+  1: uint ; vertical-resolution
+}
+
+receive-video-capability = {
+  0: codec ; codec
+  ? 1: resolution ; max-resolution
+  ? 2: float64 ; max-frames-per-second
+  ? 3: float64 ; max-pixels-per-second
+  ? 4: float64 ; min-bit-rate
+  ? 5: float64 ; aspect-ratio
+  ? 6: [* string] ; color-profiles
+  ? 7: bool ; supports-scaling
+}
+
+receive-data-capability = {
+  0: codec ; codec
+}
